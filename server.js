@@ -8,93 +8,65 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(cors());
 
-// Simulación de base de datos en memoria
-let estudiante = {
-  perfil: {
-    usuario: "string",
-    email: "string",
-    password: "string",
-    preferenciasNotificacion: {
-      canal: ["email", "whatsapp"],
-      anticipacionDias: 3,
-    },
-  },
-  materias: [
-    // Este arreglo se llenará con las materias enviadas desde el cliente
-  ],
-};
+// Base de datos en memoria: Solo materias
+let materias = [];
 
-// Servir archivos estáticos desde la carpeta 'client/public'
+// Servir archivos estáticos desde 'client/public'
 app.use(express.static(path.join(__dirname, "client", "public")));
 
-// Ruta raíz explícita para el frontend
+// Ruta raíz para el frontend
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "client", "public", "index.html"));
 });
 
-// Endpoint GET: Obtener todas las materias
+// Endpoint GET: Devuelve todas las materias
 app.get("/materias", (req, res) => {
-  res.json(estudiante.materias);
+  res.json(materias);
 });
 
-// Endpoint POST: Crear nuevas materias o procesar un objeto 'estudiante'
-app.post("/materias", (req, res) => {
-  const data = req.body;
-
-  // Si el objeto enviado contiene 'estudiante' con 'materias'
-  if (data.estudiante && data.estudiante.materias) {
-    const nuevasMaterias = data.estudiante.materias.map((materia) => ({
-      ...materia,
-      id: Date.now() + Math.random(), // Generar un ID único para cada materia
-    }));
-
-    // Agregar todas las materias al arreglo existente
-    estudiante.materias.push(...nuevasMaterias);
-
-    // Enviar una respuesta indicando que las materias fueron procesadas
-    return res
-      .status(201)
-      .json({ message: "Materias añadidas con éxito", nuevasMaterias });
+// Endpoint GET individual: Devuelve una materia por ID
+app.get("/materias/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const materia = materias.find(m => m.id === id);
+  if (materia) {
+    res.json(materia);
+  } else {
+    res.status(404).json({ error: "Materia no encontrada" });
   }
+});
 
-  // Si se envía una sola materia directamente
-  const nuevaMateria = { ...data, id: Date.now() };
-  estudiante.materias.push(nuevaMateria);
-
-  // Responder con la nueva materia
+// Endpoint POST: Crea una nueva materia
+app.post("/materias", (req, res) => {
+  // Se espera que se envíe la información de la materia directamente
+  const nuevaMateria = { ...req.body, id: Date.now() };
+  materias.push(nuevaMateria);
   res.status(201).json(nuevaMateria);
 });
 
-// Endpoint PUT: Actualizar una materia existente
+// Endpoint PUT: Actualiza una materia existente
 app.put("/materias/:id", (req, res) => {
-  const id = parseFloat(req.params.id); // Asegurarse de que se procesen IDs correctamente
-  const index = estudiante.materias.findIndex((materia) => materia.id === id);
-
+  const id = parseInt(req.params.id);
+  const index = materias.findIndex(materia => materia.id === id);
   if (index !== -1) {
-    estudiante.materias[index] = { ...estudiante.materias[index], ...req.body };
-    res.json(estudiante.materias[index]);
+    materias[index] = { ...materias[index], ...req.body };
+    res.json(materias[index]);
   } else {
     res.status(404).json({ error: "Materia no encontrada" });
   }
 });
 
-// Endpoint DELETE: Eliminar una materia
+// Endpoint DELETE: Elimina una materia
 app.delete("/materias/:id", (req, res) => {
-  const id = parseFloat(req.params.id); // Asegurarse de que se procesen IDs correctamente
-  const prevLength = estudiante.materias.length;
-
-  estudiante.materias = estudiante.materias.filter(
-    (materia) => materia.id !== id
-  );
-
-  if (estudiante.materias.length < prevLength) {
-    res.sendStatus(204); // 204 No Content
+  const id = parseInt(req.params.id);
+  const prevLength = materias.length;
+  materias = materias.filter(materia => materia.id !== id);
+  if (materias.length < prevLength) {
+    res.sendStatus(204);
   } else {
     res.status(404).json({ error: "Materia no encontrada" });
   }
 });
 
-// Iniciar el servidor
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
